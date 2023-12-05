@@ -1,4 +1,4 @@
 .library(
-    name: ${library_name},
+    name: "${library_name}",
     targets: [${library_targets}]
 )

@@ -8,23 +8,25 @@ module Fastlane
       def self.run(params)
         # Configの読み込み
         config = loadConfig
-        # 事前準備
-        prepareBinaryUpload(config)
-        # タグを取得する
-        latestTagResult = fetchLatestTag
-        # binary配布用のVersionを発行する
-        assetVersion = makeBinaryReleaseVersion(latestTagResult)
-        # リリースアセットにUpするZipを生成する
-        makeXCFrameworkZip
-        # Checksumを生成
-        checksumItems = makeXCFrameworkCheckSum(config)
-        # Upload
-        uploadBinaryForReleaseAsset(assetVersion)
-        assetUrls = fetchReleaseAssetUrls(assetVersion)
-        # # Version発行後の最新の状態を取得する
-        # `git pull`
-        # # 作業用ブランチの作成
-        # `git checkout -b feature/update-#{newVersion}`
+        makeLibraries(config)
+        # # 事前準備
+        # prepareBinaryUpload(config)
+        # # タグを取得する
+        # latestTagResult = fetchLatestTag
+        # # binary配布用のVersionを発行する
+        # assetVersion = makeBinaryReleaseVersion(latestTagResult)
+        # # リリースアセットにUpするZipを生成する
+        # makeXCFrameworkZip
+        # # Checksumを生成
+        # checksumItems = makeXCFrameworkCheckSum(config)
+        # # Upload
+        # uploadBinaryForReleaseAsset(assetVersion)
+        # assetUrls = fetchReleaseAssetUrls(assetVersion)
+
+        # # ここからリリース用のPR作成フロー
+        # # 作業ブランチの作成
+        # makePackageUpdateBranch(assetVersion)
+        # updatePackage(config, checksumItems, assetUrls)
         # # ZIP作業用フォルダの作成
         # `mkdir ./XCFrameworks/zip`
         # # # binary targetの名称を抽出
@@ -35,10 +37,6 @@ module Fastlane
         # for binaryTarget in binaryTargets
         #   p binaryTarget
         # end
-      end
-
-      def self.loadConfig
-        return open('PrivatePackageConfig.yml', 'r') { |f| YAML.load(f) }
       end
 
       def self.prepareBinaryUpload(config)
@@ -99,6 +97,47 @@ module Fastlane
         return result
       end
 
+      def self.makePackageUpdateBranch(assetVersion)
+        # Version発行後の最新の状態を取得する
+        `git pull`
+        # 作業用ブランチの作成
+        newVersion = assetVersion.split("_").shift
+        `git checkout -b feature/update-#{newVersion}`
+      end
+
+      def self.makeBinaryTargets(config, checksumItems, assetUrls)
+        result = []
+        binaryTargetTemplate = fetchTemplate("packageBinaryTargetTemplate.txt")
+        binaryTargets = config["binaryTargets"]
+        for binaryTargetName in binaryTargets
+          checksum = checksumItems[binaryTargetName]
+          assetUrl = assetUrls[binaryTargetName]
+          binaryTargetItem = binaryTargetTemplate.gsub("${binary_target_name}", binaryTargetName).gsub("${binary_target_url}", assetUrl).gsub("${binary_check_sum}", checksum)
+          result.push(binaryTargetItem)
+        end
+        return result
+      end
+
+      def self.makeLibraries(config)
+        result = []
+        libraryTemplate = fetchTemplate("packageLibraryItemTemplate.txt")
+        libraries = config["libraries"]
+        for library in libraries
+          name = library["name"]
+          targets = library["targets"].map { |target| "\"" + target + "\"" }.join(",")
+          libraryItem = libraryTemplate.gsub("${library_name}", name).gsub("${library_targets}", targets)
+          result.push(libraryItem)
+        end
+        return result
+      end
+
+      def self.updatePackage(config, checksumItems, assetUrls)
+        binaryTargets = makeBinaryTargets(config, checksumItems, assetUrls).join(",")
+        libraries = makeLibraries(config).join(",")
+        p binaryTargets
+      end
+
+
       def self.uploadBinaryForReleaseAsset(tag)
         zipDir = "./Build/Zip"
         Dir.foreach(zipDir) do |item|
@@ -106,6 +145,10 @@ module Fastlane
           frameworkPath = zipDir + "/" + item
           `gh release upload #{tag} #{frameworkPath}`
         end
+      end
+
+      def self.loadConfig
+        return open('PrivatePackageConfig.yml', 'r') { |f| YAML.load(f) }
       end
 
       def self.fetchReleaseAssetUrls(tag)
