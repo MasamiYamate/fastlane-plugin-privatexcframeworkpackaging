@@ -1,0 +1,5 @@
+.binaryTarget(
+    name: "${binary_target_name}",
+    url: "${binary_target_url}",
+    checksum: ${binary_check_sum}
+)

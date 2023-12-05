@@ -1,0 +1,4 @@
+.library(
+    name: ${library_name},
+    targets: [${library_targets}]
+)
