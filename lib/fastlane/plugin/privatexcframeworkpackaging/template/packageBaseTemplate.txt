@@ -4,7 +4,7 @@
 import PackageDescription
 
 let package = Package(
-    name: ${package_name},
+    name: "${package_name}",
     products: [
         ${product_items}
     ],
