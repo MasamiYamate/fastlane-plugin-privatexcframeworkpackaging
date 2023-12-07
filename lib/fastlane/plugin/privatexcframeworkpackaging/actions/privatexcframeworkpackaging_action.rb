@@ -62,7 +62,7 @@ module Fastlane
         # リリースアセット用のVersionの発行
         nowTime = Time.now
         assetVersion = newVersion + "_binary_" + format("%04<number>d", number: nowTime.year) + format("%02<number>d", number: nowTime.month) + format("%02<number>d", number: nowTime.day) + "_" + format("%02<number>d", number: nowTime.hour) + format("%02<number>d", number: nowTime.min) + format("%02<number>d", number: nowTime.sec)
-        `gh release create #{assetVersion}`
+        `bundle exec gh release create #{assetVersion}`
         return assetVersion
       end
 
@@ -117,7 +117,7 @@ module Fastlane
         baseBranchName = config["baseBranchName"]
         title = "Update #{newVersion}"
         body = "Update XCFrameworks Version #{newVersion}"
-        `gh pr create --base "#{baseBranchName}" --head "#{branchName}" --title "#{title}" --body "#{body}"`
+        `bundle exec gh pr create --base "#{baseBranchName}" --head "#{branchName}" --title "#{title}" --body "#{body}"`
       end
 
       # binary targetの各項目を生成する
@@ -166,7 +166,7 @@ module Fastlane
         Dir.foreach(zipDir) do |item|
           next if item == '.' or item == '..' or item == '.DS_Store'
           frameworkPath = zipDir + "/" + item
-          `gh release upload #{tag} #{frameworkPath}`
+          `bundle exec gh release upload #{tag} #{frameworkPath}`
         end
       end
 
@@ -178,7 +178,7 @@ module Fastlane
       # Upload済みのRelease Assetsのapi urlを取得する
       def self.fetchReleaseAssetUrls(tag)
         result = {}
-        assetsJson = `gh release view #{tag} --json assets`
+        assetsJson = `bundle exec gh release view #{tag} --json assets`
         assetsHash = JSON.load(assetsJson)
         assets = assetsHash["assets"]
         for asset in assets
