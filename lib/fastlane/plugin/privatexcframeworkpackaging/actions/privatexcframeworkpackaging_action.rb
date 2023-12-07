@@ -3,7 +3,7 @@ require 'yaml'
 
 module Fastlane
   module Actions
-    class Privatexcframeworkpackaging2Action < Action
+    class PrivatexcframeworkpackagingAction < Action
       def self.run(params)
         # Configの読み込み
         config = loadConfig
@@ -29,7 +29,7 @@ module Fastlane
         # Package.swiftの更新
         updatePackage(config, checksumItems, assetUrls)
         # Pull requestの発行
-
+        makeBinaryUpdatePullRequest(config, newVersion, branchName)
       end
 
       # 事前準備
@@ -99,17 +99,25 @@ module Fastlane
         # Version発行後の最新の状態を取得する
         `git pull`
         # 作業用ブランチの作成
-        branchName = feature/update-#{newVersion}
-        `git checkout -b #{branchName}`
+        branchName = "feature/update-#{newVersion}"
+        currentBranch = `git branch --contains | cut -d " " -f 2`
+        if branchName != currentBranch then
+          gitDiffExitCode = `git fetch #{branchName} & echo $?`.chomp
+          `git checkout -b #{branchName}`
+        end
         return branchName
       end
 
       # Update用のPull Requestを発行する
       def self.makeBinaryUpdatePullRequest(config, newVersion, branchName)
+        `git add .`
+        `git commit -m "Update binary #{newVersion}"`
+        `git push --set-upstream origin #{branchName}`
+
         baseBranchName = config["baseBranchName"]
         title = "Update #{newVersion}"
         body = "Update XCFrameworks Version #{newVersion}"
-        ` gh pr create --base #{baseBranchName} --head #{branchName} --title "#{title}" --body "#{body}"`
+        `gh pr create --base "#{baseBranchName}" --head "#{branchName}" --title "#{title}" --body "#{body}"`
       end
 
       # binary targetの各項目を生成する

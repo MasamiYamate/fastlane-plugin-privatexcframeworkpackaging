@@ -8,7 +8,7 @@ Gem::Specification.new do |spec|
   spec.author        = 'Masami Yamate'
   spec.email         = 'yamate.inquiry@mail.yamatte.net'
 
-  spec.summary       = 'hoge'
+  spec.summary       = 'Generate a Swift package using the XCFramework uploaded to the Release assets of a private repository.'
   spec.homepage      = "https://github.com/MasamiYamate/fastlane-plugin-privatexcframeworkpackaging"
   spec.license       = "MIT"
 
@@ -30,6 +30,5 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency('rubocop-performance')
   spec.add_development_dependency('rubocop-require_tools')
   spec.add_development_dependency('simplecov')
-  spec.add_development_dependency('gh')
 
 end
