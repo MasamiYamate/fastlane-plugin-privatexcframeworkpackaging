@@ -6,10 +6,10 @@ Gem::Specification.new do |spec|
   spec.name          = 'fastlane-plugin-privatexcframeworkpackaging'
   spec.version       = Fastlane::Privatexcframeworkpackaging::VERSION
   spec.author        = 'Masami Yamate'
-  spec.email         = 'm.yamate@mail.yamatte.net'
+  spec.email         = 'yamate.inquiry@mail.yamatte.net'
 
   spec.summary       = 'hoge'
-  # spec.homepage      = "https://github.com/<GITHUB_USERNAME>/fastlane-plugin-privatexcframeworkpackaging"
+  spec.homepage      = "https://github.com/MasamiYamate/fastlane-plugin-privatexcframeworkpackaging"
   spec.license       = "MIT"
 
   spec.files         = Dir["lib/**/*"] + %w(README.md LICENSE)
@@ -26,10 +26,10 @@ Gem::Specification.new do |spec|
   spec.add_development_dependency('fastlane', '>= 2.217.0')
   spec.add_development_dependency('pry')
   spec.add_development_dependency('rake')
-  spec.add_development_dependency('rspec')
-  spec.add_development_dependency('rspec_junit_formatter')
   spec.add_development_dependency('rubocop', '1.50.2')
   spec.add_development_dependency('rubocop-performance')
   spec.add_development_dependency('rubocop-require_tools')
   spec.add_development_dependency('simplecov')
+  spec.add_development_dependency('gh')
+
 end
