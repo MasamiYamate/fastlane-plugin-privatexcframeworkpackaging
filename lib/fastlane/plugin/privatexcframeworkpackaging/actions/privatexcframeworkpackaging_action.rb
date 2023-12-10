@@ -6,227 +6,232 @@ module Fastlane
     class PrivatexcframeworkpackagingAction < Action
       def self.run(params)
         # Configの読み込み
-        config = loadConfig
-        makeLibraries(config)
+        config = load_config
+        make_libraries(config)
         # 事前準備
-        prepareBinaryUpload(config)
+        prepare_binary_upload(config)
         # タグを取得する
-        latestTagResult = fetchLatestTag
+        latest_tag_result = fetch_latest_tag
         # binary配布用のVersionを発行する
-        assetVersion = makeBinaryReleaseVersion(latestTagResult)
+        asset_version = make_binary_release_version(latest_tag_result)
         # リリースアセットにUpするZipを生成する
-        makeXCFrameworkZip
+        make_xcframework_xip
         # Checksumを生成
-        checksumItems = makeXCFrameworkCheckSum(config)
+        checksum_items = make_xcframework_checksum(config)
         # Upload
-        uploadBinaryForReleaseAsset(assetVersion)
-        assetUrls = fetchReleaseAssetUrls(assetVersion)
+        upload_binary_for_release_asset(asset_version)
+        asset_urls = fetch_release_asset_urls(asset_version)
 
         # ここからリリース用のPR作成フロー
         # 作業ブランチの作成
-        newVersion = assetVersion.split("_").shift
-        branchName = checkoutPackageUpdateBranch(newVersion)
+        new_version = asset_version.split('_').shift
+        branch_name = checkout_package_update_branch(new_version)
         # Package.swiftの更新
-        updatePackage(config, checksumItems, assetUrls)
+        update_package(config, checksum_items, asset_urls)
         # Pull requestの発行
-        makeBinaryUpdatePullRequest(config, newVersion, branchName)
+        make_binary_update_pull_request(config, new_version, branch_name)
       end
 
       # 事前準備
-      def self.prepareBinaryUpload(config)
+      def self.prepare_binary_upload(config)
         # 既に作業用ディレクトリがある場合は削除する
         `rm -rf ./Build/Zip`
         # Baseブランチへの切り替え
-        baseBranchName = config["defaultBranchName"]
+        basebranch_name = config['defaultbranch_name']
         # 最新の状態を取得する
-        `git checkout #{baseBranchName} ; git pull`
+        `git checkout #{basebranch_name} ; git pull`
         # 最新の状態を取得する
-        `git checkout #{baseBranchName} ; git pull`
+        `git checkout #{basebranch_name} ; git pull`
         # XCFrameworkのディレクトリの確認
-        if !Dir.exist?("./XCFrameworks") then
-          throw Exception.new("There is no directory to save XCFramework")
+        unless Dir.exist?('./XCFrameworks')
+          throw Exception.new('There is no directory to save XCFramework')
         end
         # git diffがないことを確認する
-        gitDiffExitCode = `git diff --exit-code --quiet & echo $?`.chomp
-        if gitDiffExitCode != "0" then
-          throw Exception.new("There are differences")
+        git_diff_exit_code = `git diff --exit-code --quiet & echo $?`.chomp
+        if git_diff_exit_code != '0'
+          throw Exception.new('There are differences')
         end
       end
 
       # binaryリリース用のバージョンを発行する
-      def self.makeBinaryReleaseVersion(latestTagResult)
-        splitVersionItems = latestTagResult.split(".")
+      def self.make_binary_release_version(latest_tag_result)
+        split_version_items = latest_tag_result.split('.')
         # マイナーバージョンUp
-        minorVersion = splitVersionItems[1].to_i + 1
-        newVersion = splitVersionItems[0] + "." + minorVersion.to_s + "." + splitVersionItems[2].sub(/_.*/m, "")
+        minor_version = split_version_items[1].to_i + 1
+        new_version = "#{split_version_items[0]}.#{minor_version}.#{split_version_items[2].sub(/_.*/m, '')}"
         # リリースアセット用のVersionの発行
-        nowTime = Time.now
-        assetVersion = newVersion + "_binary_" + format("%04<number>d", number: nowTime.year) + format("%02<number>d", number: nowTime.month) + format("%02<number>d", number: nowTime.day) + "_" + format("%02<number>d", number: nowTime.hour) + format("%02<number>d", number: nowTime.min) + format("%02<number>d", number: nowTime.sec)
-        `bundle exec gh release create #{assetVersion}`
-        return assetVersion
+        now_time = Time.now
+        ymd_string = "#{format('%04<number>d', number: now_time.year)}#{format('%02<number>d', number: now_time.month)}#{format('%02<number>d', number: now_time.day)}"
+        hms_string = "#{format('%02<number>d', number: now_time.hour)}#{format('%02<number>d', number: now_time.min)}#{format('%02<number>d', number: now_time.sec)}"
+        asset_version = "#{new_version}_binary_#{ymd_string}_#{hms_string}"
+        `bundle exec gh release create #{asset_version}`
+        return asset_version
       end
 
       # 各frameworkをZipに圧縮する
-      def self.makeXCFrameworkZip
-        xcframeworksPath = "./XCFrameworks"
-        workDirPath = "./Build/Zip"
+      def self.make_xcframework_xip
+        xcframeworks_path = './XCFrameworks'
+        work_dir_path = './Build/Zip'
         # 作業用ディレクトリの作成
-        `mkdir -p #{workDirPath}`
-        Dir.foreach(xcframeworksPath) do |item|
-          next if item == '.' or item == '..' or item == '.DS_Store'
-          zipFilePath = workDirPath + '/' + item + '.zip'
-          xcframeworkPath = xcframeworksPath + '/' + item
-          `zip -r -X #{zipFilePath} #{xcframeworkPath}`
+        `mkdir -p #{work_dir_path}`
+        Dir.foreach(xcframeworks_path) do |item|
+          next if item == '.' || item == '..' || item == '.DS_Store'
+
+          zip_file_path = "#{work_dir_path}/#{item}.zip"
+          xcframework_path = "#{xcframeworks_path}/#{item}"
+          `zip -r -X #{zip_file_path} #{xcframework_path}`
         end
       end
 
       # 各XCFramework zipのchecksumを取得する
-      def self.makeXCFrameworkCheckSum(config)
+      def self.make_xcframework_checksum(config)
         result = {}
-        zipDir = "./Build/Zip"
-        Dir.foreach(zipDir) do |item|
-          next if item == '.' or item == '..' or item == '.DS_Store'
-          frameworkPath = zipDir + "/" + item
-          checksum = `shasum -a 256 #{frameworkPath}`.split( ).shift
-          frameworkName = extractionFrameworkname(item)
-          result[frameworkName] = checksum
+        zip_dir = './Build/Zip'
+        Dir.foreach(zip_dir) do |item|
+          next if item == '.' || item == '..' || item == '.DS_Store'
+
+          framework_path = "#{zip_dir}/#{item}"
+          checksum = `shasum -a 256 #{framework_path}`.split( ).shift
+          framework_name = extraction_framework_name(item)
+          result[framework_name] = checksum
         end
         return result
       end
 
       # Package更新用のブランチをチェックアウト
-      def self.checkoutPackageUpdateBranch(newVersion)
+      def self.checkout_package_update_branch(new_version)
         # Version発行後の最新の状態を取得する
         `git pull`
         # 作業用ブランチの作成
-        branchName = "feature/update-#{newVersion}"
-        currentBranch = `git branch --contains | cut -d " " -f 2`
-        if branchName != currentBranch then
-          gitDiffExitCode = `git fetch #{branchName} & echo $?`.chomp
-          `git checkout -b #{branchName}`
+        branch_name = "feature/update-#{new_version}"
+        current_branch = `git branch --contains | cut -d ' ' -f 2`
+        if branch_name != current_branch
+          `git checkout -b #{branch_name}`
         end
-        return branchName
+        return branch_name
       end
 
       # Update用のPull Requestを発行する
-      def self.makeBinaryUpdatePullRequest(config, newVersion, branchName)
+      def self.make_binary_update_pull_request(config, new_version, branch_name)
         `git add .`
-        `git commit -m "Update binary #{newVersion}"`
-        `git push --set-upstream origin #{branchName}`
+        commit_message = "Update binary #{new_version}"
+        `git commit -m "#{commit_message}"`
+        `git push --set-upstream origin #{branch_name}`
 
-        baseBranchName = config["baseBranchName"]
-        title = "Update #{newVersion}"
-        body = "Update XCFrameworks Version #{newVersion}"
-        `bundle exec gh pr create --base "#{baseBranchName}" --head "#{branchName}" --title "#{title}" --body "#{body}"`
+        basebranch_name = config['basebranch_name']
+        title = "Update #{new_version}"
+        body = "Update XCFrameworks Version #{new_version}"
+        `bundle exec gh pr create --base "#{basebranch_name}" --head "#{branch_name}" --title "#{title}" --body "#{body}"`
       end
 
       # binary targetの各項目を生成する
-      def self.makeBinaryTargets(config, checksumItems, assetUrls)
+      def self.make_binary_targets(config, checksum_items, asset_urls)
         result = []
-        binaryTargetTemplate = fetchTemplate("packageBinaryTargetTemplate.txt")
-        binaryTargets = config["binaryTargets"]
-        for binaryTargetName in binaryTargets
-          checksum = checksumItems[binaryTargetName]
-          assetUrl = assetUrls[binaryTargetName] + ".zip"
-          binaryTargetItem = binaryTargetTemplate.gsub("${binary_target_name}", binaryTargetName).gsub("${binary_target_url}", assetUrl).gsub("${binary_check_sum}", checksum)
-          result.push(binaryTargetItem)
+        binary_target_template = fetch_template('packagebinary_target_template.txt')
+        binary_targets = config['binary_targets']
+        for binary_target_name in binary_targets
+          checksum = checksum_items[binary_target_name]
+          asset_url = "#{asset_urls[binary_target_name]}.zip"
+          binary_target_item = binary_target_template.gsub('${binary_target_name}', binary_target_name).gsub('${binary_target_url}', asset_url).gsub('${binary_check_sum}', checksum)
+          result.push(binary_target_item)
         end
         return result
       end
 
       # libraryの各項目を生成する
-      def self.makeLibraries(config)
+      def self.make_libraries(config)
         result = []
-        libraryTemplate = fetchTemplate("packageLibraryItemTemplate.txt")
-        libraries = config["libraries"]
+        library_template = fetch_template('packagelibrary_itemTemplate.txt')
+        libraries = config['libraries']
         for library in libraries
-          name = library["name"]
-          targets = library["targets"].map { |target| "\"" + target + "\"" }.join(",")
-          libraryItem = libraryTemplate.gsub("${library_name}", name).gsub("${library_targets}", targets)
-          result.push(libraryItem)
+          name = library['name']
+          targets = library['targets'].map { |target| '\'' + target + '\'' }.join(',')
+          library_item = library_template.gsub('${library_name}', name).gsub('${library_targets}', targets)
+          result.push(library_item)
         end
         return result
       end
 
       # Package.swiftを更新する
-      def self.updatePackage(config, checksumItems, assetUrls)
-        binaryTargets = makeBinaryTargets(config, checksumItems, assetUrls).join(",")
-        libraries = makeLibraries(config).join(",")
-        packageName = config["packageName"]
-        updatePackageTemplate = fetchTemplate("packageBaseTemplate.txt")
-        updatePackageTxt = updatePackageTemplate.gsub("${package_name}", packageName).gsub("${product_items}", libraries).gsub("${binary_targets}", binaryTargets)
-        open("./Package.swift", 'w') do |file|
-          file.puts(updatePackageTxt)
+      def self.update_package(config, checksum_items, asset_urls)
+        binary_targets = make_binary_targets(config, checksum_items, asset_urls).join(',')
+        libraries = make_libraries(config).join(',')
+        package_name = config['package_name']
+        update_package_template = fetch_template('packageBaseTemplate.txt')
+        update_package_txt = update_package_template.gsub('${package_name}', package_name).gsub('${product_items}', libraries).gsub('${binary_targets}', binary_targets)
+        open('./Package.swift', 'w') do |file|
+          file.puts(update_package_txt)
         end
       end
 
       # binaryをUploadする
-      def self.uploadBinaryForReleaseAsset(tag)
-        zipDir = "./Build/Zip"
-        Dir.foreach(zipDir) do |item|
-          next if item == '.' or item == '..' or item == '.DS_Store'
-          frameworkPath = zipDir + "/" + item
-          `bundle exec gh release upload #{tag} #{frameworkPath}`
+      def self.upload_binary_for_release_asset(tag)
+        zip_dir = './Build/Zip'
+        Dir.foreach(zip_dir) do |item|
+          next if item == '.' || item == '..' || item == '.DS_Store'
+          
+          framework_path = "#{zip_dir}/#{item}"
+          `bundle exec gh release upload #{tag} #{framework_path}`
         end
       end
 
       # 設定ファイルを取得する
-      def self.loadConfig
+      def self.load_config
         return open('PrivatePackageConfig.yml', 'r') { |file| YAML.load(file) }
       end
 
       # Upload済みのRelease Assetsのapi urlを取得する
-      def self.fetchReleaseAssetUrls(tag)
+      def self.fetch_release_asset_urls(tag)
         result = {}
-        assetsJson = `bundle exec gh release view #{tag} --json assets`
-        assetsHash = JSON.load(assetsJson)
-        assets = assetsHash["assets"]
+        assets_json = `bundle exec gh release view #{tag} --json assets`
+        assets_hash = JSON.load(assets_json)
+        assets = assets_hash['assets']
         for asset in assets
-          apiUrl = asset["apiUrl"]
-          frameworkName = extractionFrameworkname(asset["name"])
-          result[frameworkName] = apiUrl
+          api_url = asset['apiUrl']
+          framework_name = extraction_framework_name(asset['name'])
+          result[framework_name] = api_url
         end
         return result
       end
 
       # Package.swift更新用の各テンプレートファイルを抽出する
-      def self.fetchTemplate(fileName)
-        directoryPathItems = __dir__.split(File::SEPARATOR)
-        directoryPathItems.pop
-        pluginRootDirPath = directoryPathItems.join(File::Separator)
-        templateFile = open(pluginRootDirPath + '/template/' + fileName, 'r')
-        return templateFile.read
+      def self.fetch_template(file_name)
+        directory_path_items = __dir__.split(File::SEPARATOR)
+        directory_path_items.pop
+        plugin_root_dir_path = directory_path_items.join(File::Separator)
+        template_file = open("#{plugin_root_dir_path}/template/#{file_name}", 'r')
+        return template_file.read
       end
 
       # 拡張子付きのファイル名からFramework名称を抽出する
-      def self.extractionFrameworkname(fileName)
+      def self.extraction_framework_name(file_name)
         # hogeFuga.xcframeworkやhogeFuga.xcframework.zipからファイル名を抽出する
-        return fileName.split(".").shift
+        return file_name.split('.').shift
       end
 
       # 最新のタグを取得する
-      def self.fetchLatestTag
+      def self.fetch_latest_tag
         # タグを取得する
-        latestTagResult = `git describe --tags`.chomp
-        if latestTagResult == ""
-          latestTagResult = "0.0.0"
+        latest_tag_result = `git describe --tags`.chomp
+        if latest_tag_result == ''
+          latest_tag_result = '0.0.0'
         end
-        return latestTagResult
+        return latest_tag_result
       end
 
       def self.description
-        "Generate a Swift package using the XCFramework uploaded to the Release assets of a private repository."
+        'Generate a Swift package using the XCFramework uploaded to the Release assets of a private repository.'
       end
 
       def self.authors
-        ["Masami Yamate"]
+        ['Masami Yamate']
       end
 
       def self.return_value
       end
 
       def self.details
-        "Generate a Swift package using the XCFramework uploaded to the Release assets of a private repository."
+        'Generate a Swift package using the XCFramework uploaded to the Release assets of a private repository.'
       end
 
       def self.available_options

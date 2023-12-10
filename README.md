@@ -51,13 +51,13 @@ Create a file named "PrivatePackageConfig.yml" directly under the project direct
 The following is an example entry for "PrivatePackageConfig.yml". Please modify it accordingly to suit your installation environment.
 
 ```yml
-defaultBranchName: "main" # Default branch name for repository
-packageName: "PrivateXCFrameworkPackagingExampleFramework" # Package name in Package.swift
+default_branch_name: "main" # Default branch name for repository
+package_name: "PrivateXCFrameworkPackagingExampleFramework" # Package name in Package.swift
 libraries: # Library item settings included in the Product array (multiple settings possible)
  - name: "SampleFramework" # Library Name
    targets: # Name of binary target to include in library
     - "SampleFramework" # binary target name
-binaryTargets: # Binary target name. Use the same name as the XCFramework name.
+binary_targets: # Binary target name. Use the same name as the XCFramework name.
  - "SampleFramework" # XCFramework name
 ```
 
