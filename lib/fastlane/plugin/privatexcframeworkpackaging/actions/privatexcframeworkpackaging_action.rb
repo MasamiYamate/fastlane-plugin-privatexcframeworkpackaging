@@ -212,7 +212,7 @@ module Fastlane
       # 最新のタグを取得する
       def self.fetch_latest_tag
         # タグを取得する
-        latest_tag_result = `git describe --tags`.chomp
+        latest_tag_result = `git describe --tags --abbrev=0`.chomp
         if latest_tag_result == ''
           latest_tag_result = '0.0.0'
         end
