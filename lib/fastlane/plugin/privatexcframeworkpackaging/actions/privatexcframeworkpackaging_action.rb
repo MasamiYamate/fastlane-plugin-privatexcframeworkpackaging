@@ -71,7 +71,7 @@ module Fastlane
         xcframeworksPath = "./XCFrameworks"
         workDirPath = "./Build/Zip"
         # 作業用ディレクトリの作成
-        Dir.mkdir(workDirPath)
+        `mkdir #{workDirPath}`
         Dir.foreach(xcframeworksPath) do |item|
           next if item == '.' or item == '..' or item == '.DS_Store'
           zipFilePath = workDirPath + '/' + item + '.zip'
