@@ -127,7 +127,7 @@ module Fastlane
       # binary targetの各項目を生成する
       def self.make_binary_targets(config, checksum_items, asset_urls)
         result = []
-        binary_target_template = fetch_template('packagebinary_target_template.txt')
+        binary_target_template = fetch_template('package_binary_target_template.txt')
         binary_targets = config['binary_targets']
         for binary_target_name in binary_targets
           checksum = checksum_items[binary_target_name]
@@ -141,7 +141,7 @@ module Fastlane
       # libraryの各項目を生成する
       def self.make_libraries(config)
         result = []
-        library_template = fetch_template('packagelibrary_itemTemplate.txt')
+        library_template = fetch_template('package_library_item_template.txt')
         libraries = config['libraries']
         for library in libraries
           name = library['name']
@@ -157,7 +157,7 @@ module Fastlane
         binary_targets = make_binary_targets(config, checksum_items, asset_urls).join(',')
         libraries = make_libraries(config).join(',')
         package_name = config['package_name']
-        update_package_template = fetch_template('packageBaseTemplate.txt')
+        update_package_template = fetch_template('package_base_template.txt')
         update_package_txt = update_package_template.gsub('${package_name}', package_name).gsub('${product_items}', libraries).gsub('${binary_targets}', binary_targets)
         open('./Package.swift', 'w') do |file|
           file.puts(update_package_txt)
