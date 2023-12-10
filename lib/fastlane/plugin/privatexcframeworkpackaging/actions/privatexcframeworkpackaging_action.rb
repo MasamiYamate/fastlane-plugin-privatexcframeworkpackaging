@@ -37,7 +37,7 @@ module Fastlane
         # 既に作業用ディレクトリがある場合は削除する
         `rm -rf ./Build/Zip`
         # Baseブランチへの切り替え
-        baseBranchName = config["baseBranchName"]
+        baseBranchName = config["defaultBranchName"]
         # 最新の状態を取得する
         `git checkout #{baseBranchName} ; git pull`
         # 最新の状態を取得する
